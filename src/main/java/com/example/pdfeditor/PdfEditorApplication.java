@@ -22,7 +22,7 @@ public class PdfEditorApplication {
             pdfEditor.unlockPDF(pdfFiles, path);
             pdfEditor.mergeUsingPDFBox(pdfFiles, "merged.pdf", path);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("PDF processing failed: " + e.getMessage());
         }
     }
 }

@@ -10,8 +10,15 @@ public class FilesNameGetter {
         String directoryPath = "/Users/eprie/Documents/GitHub/pdf-editor/recibos";
 
         File directory = new File(directoryPath);
+        File[] files = directory.listFiles(file -> file.isFile()
+            && file.getName().toLowerCase().endsWith(".pdf")
+            && !file.getName().toLowerCase().endsWith("_unlocked.pdf"));
 
-        return Arrays.stream(directory.listFiles()).map(
+        if (files == null) {
+            return List.of();
+        }
+
+        return Arrays.stream(files).map(
             File::getName
         ).toList();
     }
