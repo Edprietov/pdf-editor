@@ -13,13 +13,12 @@ public class PdfEditorApplication {
     public static void main(String[] args) {
         ApplicationContext context = SpringApplication.run(PdfEditorApplication.class, args);
 
-        String path = "/Users/eprie/Documents/GitHub/pdf-editor/recibos";
-        List<String> pdfFiles = FilesNameGetter.get();
+        String path = context.getEnvironment().getProperty("pdf.directory");
+        List<String> pdfFiles = FilesNameGetter.get(path);
 
         PdfEditor pdfEditor = context.getBean(PdfEditor.class);
 
         try {
-            pdfEditor.unlockPDF(pdfFiles, path);
             pdfEditor.mergeUsingPDFBox(pdfFiles, "merged.pdf", path);
         } catch (IOException e) {
             System.err.println("PDF processing failed: " + e.getMessage());

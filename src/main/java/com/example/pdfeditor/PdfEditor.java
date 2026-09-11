@@ -2,6 +2,7 @@ package com.example.pdfeditor;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.pdfbox.Loader;
@@ -26,54 +27,39 @@ public class PdfEditor {
 
     void mergeUsingPDFBox(List<String> pdfFiles, String outputFile, String path) throws IOException {
         PDFMergerUtility pdfMergerUtility = new PDFMergerUtility();
-        pdfMergerUtility.setDestinationFileName(outputFile);
-        File output = new File(outputFile);
+        File output = new File(path, outputFile);
+        pdfMergerUtility.setDestinationFileName(output.getPath());
         if (output.exists() && !output.delete()) {
             logger.warn("Could not delete existing output file '{}' before merge", output.getAbsolutePath());
         }
-        int validSources = 0;
 
+        List<File> unlockedFiles = new ArrayList<>();
         for (String file : pdfFiles) {
             File sourceFile = new File(path, file);
             File unlockedFile = new File(path, file.replace(".pdf", "_unlocked.pdf"));
             try {
-                try (PDDocument doc1 = Loader.loadPDF(sourceFile, pdfCredentials.getPassword())) {
+                try (PDDocument doc = Loader.loadPDF(sourceFile, pdfCredentials.getPassword())) {
                     if (unlockedFile.exists() && !unlockedFile.delete()) {
                         logger.warn("Could not delete existing file '{}' before overwrite", unlockedFile.getAbsolutePath());
                     }
-                    doc1.setAllSecurityToBeRemoved(true);
-                    doc1.save(unlockedFile);
+                    doc.setAllSecurityToBeRemoved(true);
+                    doc.save(unlockedFile);
                 }
                 pdfMergerUtility.addSource(unlockedFile);
-                validSources++;
+                unlockedFiles.add(unlockedFile);
             } catch (IOException e) {
                 logger.warn("Skipping file '{}' during merge: {}", sourceFile.getAbsolutePath(), e.getMessage());
             }
         }
 
-        if (validSources == 0) {
+        if (unlockedFiles.isEmpty()) {
             throw new IOException("No valid PDF files found to merge.");
         }
 
-        pdfMergerUtility.mergeDocuments(setupMainMemoryOnly().streamCache);
-    }
-
-    void unlockPDF(List<String> pdfFiles, String path) {
-
-        for (String file : pdfFiles) {
-            File sourceFile = new File(path, file);
-            File unlockedFile = new File(path, file.replace(".pdf", "_unlocked.pdf"));
-            try {
-                try (PDDocument unlockedDocument = Loader.loadPDF(sourceFile, pdfCredentials.getPassword())) {
-                    if (unlockedFile.exists() && !unlockedFile.delete()) {
-                        logger.warn("Could not delete existing file '{}' before overwrite", unlockedFile.getAbsolutePath());
-                    }
-                    unlockedDocument.setAllSecurityToBeRemoved(true);
-                    unlockedDocument.save(unlockedFile);
-                }
-            } catch (IOException e) {
-                logger.warn("Skipping file '{}' during unlock: {}", sourceFile.getAbsolutePath(), e.getMessage());
-            }
+        try {
+            pdfMergerUtility.mergeDocuments(setupMainMemoryOnly().streamCache);
+        } finally {
+            unlockedFiles.forEach(File::delete);
         }
     }
 }
